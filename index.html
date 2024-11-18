@@ -3,25 +3,29 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Iteration 1</title>
+    <title>Small talk simulator</title>
 
     <!-- PicoCSS stylesheets -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css" />
+    <script type="text/javascript" src="https://data.id.tue.nl/web/RWcveVFZbXdYSWUyNEtadlJ1Z3pkRmNBRzBQb2UrK1dSL01qeVh0V0g1QT0=/riffwave.js"></script>
+    <script type="text/javascript" src="https://data.id.tue.nl/web/RWcveVFZbXdYSWUyNEtadlJ1Z3pkRmNBRzBQb2UrK1dSL01qeVh0V0g1QT0=/Blob.js"></script>
+    <script type="text/javascript" src="https://data.id.tue.nl/web/RWcveVFZbXdYSWUyNEtadlJ1Z3pkRmNBRzBQb2UrK1dSL01qeVh0V0g1QT0=/FileSaver.min.js"></script>
+    <script type="text/javascript" src="https://data.id.tue.nl/web/RWcveVFZbXdYSWUyNEtadlJ1Z3pkRmNBRzBQb2UrK1dSL01qeVh0V0g1QT0=/animalese.js"></script>
+
 </head>
 
 <body>
     <header class="container">
-        <h1>Iteration 1</h1>
+        <h1>Small talk simulator</h1>
     </header>
     <main class="container">
         <section id="chat" class="container">
             <!-- Initial chatbot message -->
-            <h5>Chatbot</h5>
+            <h2>🐶</h2>
             <div class="msg-left">
                 <article class="pico-background-pumpkin-150">
-                    Hi! I'm here to speak to you about your hobbies. What is your
-                    favorite thing to do?
+                    Hi how are you doing today?
                 </article>
                 <div></div>
             </div>
@@ -29,25 +33,34 @@
         <section class="container">
             <!-- Three buttons used to create a branch. Each option has a different response. -->
             <!-- Initially this section is set to display: none as they are not used immediately -->
-            <section style="display: none" id='branches'>
+            <section  id='branches'>
                 <h5 class="right">YOU</h5>
                 <div class="grid">
-                    <button class="pico-background-pumpkin-350" onclick="userChoice('Forget it')">
-                        Forget it</button><button onclick="userChoice('Nothing else')"
-                        class="pico-background-pumpkin-350">Nothing else</button><button
-                        class="pico-background-pumpkin-350" onclick="userChoice(`I can't choose`)">I can't
-                        choose</button>
+                    <button class="pico-background-green-600" onclick="userChoice('Forget it')">
+                        Randomize topic</button>
                 </div>
             </section>
             <!-- User input and send button -->
+            
             <section id="userResponse">
                 <div role="group">
-                    <input id="userInput" type="text" placeholder="start typing here" onkeydown="checkEnter(event)" />
-                    <button type="submit" class="pico-background-pumpkin-350" onclick="sendMessage()">
+                    <textarea id="userInput" type="text" placeholder="start typing here" onkeydown="checkEnter(event)" /></textarea><br/>
+                    <button id="preview" type="submit" class="pico-background-pumpkin-350" onclick="talkAndWait()">
                         send
                     </button>
                 </div>
             </section>
+            <section display="grid"> 
+                <h3>Tone</h3>
+                <div role="group">
+                <h5>Sad</h5>
+                <input id="pitch" type="range" min="0.02" max="2.0" value="1.0" step="0.1"/>
+                <h5>Cheerful</h5>
+                </div>
+                <label style="display: none">Shorten words<input id="shorten" type="checkbox"/></label><br/>
+                </div>
+            </section>
+
         </section>
     </main>
 
@@ -76,17 +89,70 @@
     </style>
 
     <script>
+        function dataURItoBlob(dataURI) {
+            // convert base64/URLEncoded data component to raw binary data held in a string
+            var byteString;
+            if (dataURI.split(',')[0].indexOf('base64') >= 0)
+                byteString = atob(dataURI.split(',')[1]);
+            else
+                byteString = unescape(dataURI.split(',')[1]);
+
+            // separate out the mime component
+            var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+
+            // write the bytes of the string to a typed array
+            var ia = new Uint8Array(byteString.length);
+            for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+
+            return new Blob([ia], {type:mimeString});
+            }
+
+        var synth = new Animalese('animalese.wav', function() {
+        document.getElementById("preview").disabled = false;
+        // document.getElementById("download").disabled = false;
+        });
+
+        function generateWav() {
+            return synth.Animalese(document.getElementById("userInput").value,
+                                document.getElementById("shorten").checked,
+                                document.getElementById("pitch").value).dataURI;
+        }
+
+        function generateResponse(responseScript) {
+            return synth.Animalese(responseScript,
+                                document.getElementById("shorten").checked,
+                                1.8).dataURI;
+        }
+
+        function preview() {
+        var audio = new Audio();
+        audio.src = generateWav();
+        audio.play();
+        audio.onloadedmetadata = function() {
+        alert(audio.duration);
+        };
+        return (audio.onloadedmetadata);
+        }
+
+        function previewResponse(script) {
+        var audio = new Audio();
+        audio.src = generateResponse(script);
+        audio.play();
+        }
+
         // questionNr is used to know at thich question the user is, in order to give the correct answer.
         let questionNr = 1;
 
         //array that will be used to save responses
         let messageHistory = []
         //Add first message
-        messageHistory.push({ role: 'assistant', content: "Hi! I'm here to speak to you about your hobbies. What is your favorite thing to do?" })
+        messageHistory.push({ role: 'assistant', content: "Naomi trek een bak" })
 
         // hobby variable to store the user response and use it later
         let hobby = "";
-
+        let tonePath = 0;
         //Function to 'send' user input, and provide a response
         function sendMessage() {
             //Extract message from input element
@@ -95,20 +161,48 @@
             document.querySelector("#userInput").value = "";
             //Add user message to the screen
             addMessage("user", msg);
-
             if (questionNr === 1) {
                 hobby = msg; //save the answer
+                tone = document.getElementById("pitch").value
+                if ((msg.includes("Good") || msg.includes("good"))&& (tone >= 1)){
+                    tonePath = 3;
+                    alert(tonePath)
+                    previewResponse(`Nice to hear you are good, what have you been upto? . `);
+                    addMessage(
+                        "assistant",
+                        `I'm good too, what have you been upto lately?`
+                    );}
+                else if (msg.includes("Good") && (tone < 1)){
+                    tonePath = 2;
+                    previewResponse(`Are you sure you are feeling good? you dont sound too well.`);
+                    addMessage(
+                        "assistant",
+                        `are you sure you are feeling good? you dont sound too well.`
+                    );}
+                else {
+                    tonePath = 1;
+                    previewResponse(`euhhh, are you alright?`);
+                    addMessage(
+                        "assistant",
+                        `ehh, are you alright?`
+                    );}
+            } 
+            else if (questionNr === 2 && (tonePath === 1 || tonePath ===1)) {
+                previewResponse(`I'm sorry to hear, hopefully you'll be better soon...`);
                 addMessage(
                     "assistant",
-                    `Interesting! I don't know many people who like ${msg}. What do you like about it?`
+                    `I'm sorry to hear, hopefully you'll be better soon...`
                 );
-            } else if (questionNr === 2) {
+            }
+            else if (questionNr == 2 & tonePath == 3){
+                previewResponse(`That sounds so much fun, can I join next time`);
                 addMessage(
                     "assistant",
-                    `Now I understand. I have another question for you. If you had to choose between forgetting ${hobby} ever existed, or being able to do nothing else for the rest of your life, what would you choose?`
+                    `That sounds so much fun, can I join next time`
                 );
+            
                 //Show the buttons to give three options
-                document.querySelector('#branches').style.display = 'block'
+                // document.querySelector('#branches').style.display = 'block'
             } else if (questionNr === 4) {
                 //End the conversation
                 addMessage(
@@ -120,21 +214,29 @@
             //Increate question counter
             questionNr += 1;
         }
+        var delayInMilliseconds = 1000; //1 second
+
+        function talkAndWait(){
+            preview();
+            setTimeout(() => {
+            sendMessage();
+            }, 1000);
+        }
 
         //Function to handle the three options provided by the user and give different answers
         function userChoice(choice) {
             addMessage("user", choice);
-            if (choice === 'Forget it') {
+            if (choice === 'Pils') {
                 addMessage(
                     "assistant",
                     `Interesting! I guess ${hobby} is not THAT important to you. Can I assume you have other hobbies as well? Tell me about them`
                 );
-            } else if (choice === 'Nothing else') {
+            } else if (choice === 'Baco') {
                 addMessage(
                     "assistant",
                     `Wow! You care a lot about ${hobby}. Is there anything you care about more?`
                 );
-            } else if (choice === `I can't choose`) {
+            } else if (choice === `niks`) {
                 addMessage(
                     "assistant",
                     `You can't choose? That's the game! :D. Let me frame the question differently. Are there things your care about more than ${hobby}?`
@@ -163,7 +265,7 @@
             else if (type === "assistant") {
                 document.querySelector("#chat").insertAdjacentHTML(
                     "beforeend",
-                    `<h5>Chatbot</h5><div class="msg-left">
+                    `<h2>🐶</h2><div class="msg-left">
           
           <article class="pico-background-pumpkin-150">${input}</article>
           <div></div>
@@ -179,7 +281,7 @@
         //At the input element, when a key is pressed, check if this key was the Enter key. If so, send message.
         function checkEnter(event) {
             if (event.key === "Enter") {
-                sendMessage();
+                talkAndWait();
             }
         }
     </script>
